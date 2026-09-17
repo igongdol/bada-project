@@ -1,0 +1,1099 @@
+<!--
+  prototype shell: the review chrome every prototype starts from.
+
+  Keep this comment in the prototype you grow from here: it is the contract,
+  and later turns work from that file rather than from this one.
+
+  Contract (extend product screens; keep the review shell):
+  - Product:  .sh-stage contains only end-user product UI. Keep review notes,
+               rationale, instructions, and approval controls in conversation.
+  - Screens:  <section data-screen="slug" data-title="Label"> inside .sh-stage.
+               The selector, arrow keys, and #hash routing build themselves.
+               Use one option per product destination or distinct surface,
+               named by its product role. Keep baselines, variants, comparison
+               labels, steps, indexes, and progress out of names and states.
+               Links may use href="#slug".
+  - States:   "Default" is automatic. A screen declares only representative
+               presets in data-states="Empty,Error". Use natural, screen-specific
+               names. Reserve presets for important multi-step results, forced
+               data or errors, or materially different structure; keep one-click
+               and transient states as interactions. Use data-when="Empty" on
+               preset-only elements. Call prototypeShell.setState("Name") on
+               entry and setState("Default") on exit, including when repeated
+               actions cross a preset condition.
+  - Viewport: "vp (m)" cycles full / 390 / 768. The 390 preset is a
+               fixed-height, internally scrolling phone frame. Start a
+               mobile-first prototype by adding class="sh-vp-390" to <body>
+               (or a bootstrap classList.add before the chrome script runs).
+  - Pinning:  keep in-frame bars (tab bars, CTAs) inside the phone with
+               position: sticky; position: fixed pins to the browser window.
+  - Tokens:   replace the project-tokens block with project tokens copied
+               verbatim. Map differing names to --background, --foreground, and
+               --font afterwards; replace network fonts with a system stack and
+               note that substitution. Without a design system, keep this
+               palette as the finished style. When the project ships dark
+               tokens, copy them under .sh-theme-dark, which the shell sets
+               on both the root element and body, so :root.sh-theme-dark and
+               body.sh-theme-dark work too. A .dark class or a
+               prefers-color-scheme media query copied verbatim would follow
+               the reviewer's system instead of the toggle.
+  - Theme:    the light / dark switch (t) changes the product surface only.
+               It appears only when a .sh-theme-dark rule declares dark tokens,
+               so a prototype without them carries no theme control. Prototypes
+               always load light; the review bar keeps its own dark styling in
+               both themes so it still reads as chrome.
+  - Placeholders: .wf-pic stands in for pictures the prototype has no real
+               files for. Use real text everywhere text belongs.
+
+  - Chrome:   Keep exactly the screen selector, selected-screen state selector,
+               viewport cycle, and theme toggle.
+
+  Self-contained by design: no build, no framework, no network.
+-->
+<meta charset="utf-8">
+<title>바다타자 prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ── project tokens: copied from app/globals.css (oklch values verbatim).
+       Google-hosted Inter / Geist Mono replaced with a system stack.           ── */
+  :root {
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.147 0.004 49.25);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.147 0.004 49.25);
+    --primary: oklch(0.488 0.243 264.376);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.97 0.001 106.424);
+    --muted-foreground: oklch(0.553 0.013 58.071);
+    --accent: oklch(0.97 0.001 106.424);
+    --accent-foreground: oklch(0.216 0.006 56.043);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.923 0.003 48.717);
+    --input: oklch(0.923 0.003 48.717);
+    --ring: oklch(0.709 0.01 56.259);
+    --chart-1: oklch(0.869 0.005 56.366);
+    --chart-2: oklch(0.553 0.013 58.071);
+    --chart-3: oklch(0.444 0.011 73.639);
+    --chart-4: oklch(0.374 0.01 67.558);
+    --chart-5: oklch(0.268 0.007 34.298);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.985 0.001 106.423);
+    --sidebar-foreground: oklch(0.147 0.004 49.25);
+    --sidebar-primary: oklch(0.546 0.245 262.881);
+    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+    --sidebar-accent: oklch(0.97 0.001 106.424);
+    --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
+    --sidebar-border: oklch(0.923 0.003 48.717);
+    --sidebar-ring: oklch(0.709 0.01 56.259);
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.147 0.004 49.25);
+
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+
+    --font: ui-sans-serif, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  .sh-theme-dark {
+    --background: oklch(0.147 0.004 49.25);
+    --foreground: oklch(0.985 0.001 106.423);
+    --card: oklch(0.216 0.006 56.043);
+    --card-foreground: oklch(0.985 0.001 106.423);
+    --popover: oklch(0.216 0.006 56.043);
+    --popover-foreground: oklch(0.985 0.001 106.423);
+    --primary: oklch(0.424 0.199 265.638);
+    --primary-foreground: oklch(0.97 0.014 254.604);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.268 0.007 34.298);
+    --muted-foreground: oklch(0.709 0.01 56.259);
+    --accent: oklch(0.268 0.007 34.298);
+    --accent-foreground: oklch(0.985 0.001 106.423);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.553 0.013 58.071);
+    --chart-1: oklch(0.869 0.005 56.366);
+    --chart-2: oklch(0.553 0.013 58.071);
+    --chart-3: oklch(0.444 0.011 73.639);
+    --chart-4: oklch(0.374 0.01 67.558);
+    --chart-5: oklch(0.268 0.007 34.298);
+    --sidebar: oklch(0.216 0.006 56.043);
+    --sidebar-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-primary: oklch(0.623 0.214 259.815);
+    --sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+    --sidebar-accent: oklch(0.268 0.007 34.298);
+    --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.553 0.013 58.071);
+  }
+
+  /* ── review chrome (sh-*): keep; extend product styles elsewhere ── */
+  * { box-sizing: border-box }
+  body {
+    margin: 0; padding: 0 0 40px;
+    background: var(--background, #f6f6f6); color: var(--foreground, #3a3a3a);
+    font-family: var(--font, system-ui, sans-serif);
+  }
+  .sh-bar {
+    position: sticky; top: 0; z-index: 999;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 8px 12px; background: #191a1c; color: #d7d7d7;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .sh-bar b, .sh-control-label { color: #8a8f98; font-weight: 500 }
+  .sh-control { display: inline-flex; gap: 5px; align-items: center }
+  .sh-bar button {
+    border: 1px solid #3a3d42; background: none; color: inherit;
+    font: inherit; padding: 2px 9px; border-radius: 99px; cursor: pointer;
+  }
+  .sh-bar select {
+    width: 170px; border: 1px solid #3a3d42; background: #232428; color: inherit;
+    font: inherit; padding: 3px 28px 3px 9px; border-radius: 7px; cursor: pointer;
+    color-scheme: dark;
+  }
+  #sh-screen { width: 190px }
+  .sh-bar button.on { background: #d7d7d7; color: #191a1c; border-color: #d7d7d7 }
+  .sh-theme { display: inline-flex; border: 1px solid #3a3d42; border-radius: 99px; overflow: hidden }
+  .sh-theme button { border: 0; border-radius: 0; padding: 2px 10px }
+  .sh-spacer { flex: 1 }
+  .sh-stage { max-width: 960px; margin: 0 auto; padding: 12px 16px 0 }
+  [hidden] { display: none !important }
+
+  /* viewport presets */
+  .sh-vp-390 .sh-stage {
+    max-width: 390px; background: var(--background, #f6f6f6);
+    border: 10px solid #191a1c; border-radius: 28px;
+    padding: 16px 12px; height: min(844px, calc(100dvh - 52px));
+    overflow-y: auto; margin-top: 12px;
+  }
+  .sh-vp-768 .sh-stage {
+    max-width: 768px; border: 1px solid #c4c4c4; border-radius: 12px;
+    padding: 16px; margin-top: 12px;
+  }
+
+  /* placeholders */
+  .wf-pic  { border-radius: 4px; background:
+             repeating-linear-gradient(45deg, #e9e9e9, #e9e9e9 6px, #f2f2f2 6px, #f2f2f2 12px) }
+  .sh-theme-dark .wf-pic { background: repeating-linear-gradient(45deg,
+             color-mix(in srgb, var(--foreground) 16%, transparent) 0 6px,
+             color-mix(in srgb, var(--foreground) 8%, transparent) 6px 12px) }
+
+  /* ── 바다타자 product surface: shadcn preset semantic tokens only ───── */
+
+  .bd-shell {
+    position: relative;
+    background: var(--card); color: var(--card-foreground);
+    border: 1px solid var(--border); border-radius: var(--radius-2xl);
+    padding: clamp(18px, 3vw, 32px);
+    display: flex; flex-direction: column; gap: clamp(16px, 2.4vw, 24px);
+  }
+
+  .bd-title { font-size: clamp(22px, 3.4vw, 30px); font-weight: 700; margin: 0; letter-spacing: -0.02em }
+  .bd-lede { margin: 0; font-size: clamp(14px, 1.7vw, 17px); line-height: 1.65; color: var(--muted-foreground) }
+
+  /* top meters */
+  .bd-meters { display: grid; grid-template-columns: 1fr auto auto; gap: 10px 16px; align-items: center }
+  .bd-meter-label { font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+                    white-space: nowrap; color: var(--muted-foreground) }
+  .bd-timebar { grid-column: 1 / -1; height: 10px; border-radius: 99px; overflow: hidden; background: var(--muted) }
+  .bd-timebar-fill { height: 100%; width: 100%; border-radius: 99px;
+                     background: var(--muted-foreground); transition: width 240ms linear }
+  .bd-goal { display: flex; align-items: center; gap: 10px; justify-self: end }
+  .bd-gauge { position: relative; width: clamp(110px, 20vw, 220px); height: 12px;
+              border-radius: 99px; background: var(--muted) }
+  .bd-gauge-fill { height: 100%; width: 0; border-radius: 99px; background: var(--primary);
+                   transition: width 200ms ease }
+  .bd-gauge[data-record="true"] .bd-gauge-fill { background: var(--foreground) }
+  .bd-goal-count { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+                   font-variant-numeric: tabular-nums; min-width: 8ch; text-align: right }
+
+  /* the letter */
+  .bd-arena { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px }
+  .bd-letter { font-size: clamp(120px, 22vw, 210px); line-height: 1; font-weight: 700;
+               color: var(--foreground); letter-spacing: -0.04em }
+  .bd-letter.hit { animation: bd-hit 260ms ease-out; color: var(--primary) }
+  .bd-letter.miss { animation: bd-miss 300ms ease-out; color: var(--destructive) }
+  @keyframes bd-hit  { 0% { transform: scale(1) } 45% { transform: scale(1.14) } 100% { transform: scale(1) } }
+  @keyframes bd-miss { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-12px) }
+                       50% { transform: translateX(11px) } 78% { transform: translateX(-6px) } }
+
+  .bd-streak { min-height: 32px; display: flex; align-items: center;
+               font-size: 15px; font-weight: 700; color: var(--primary) }
+  .bd-streak[data-quiet="true"] { opacity: 0 }
+  .bd-streak[data-cheer="true"] { background: var(--primary); color: var(--primary-foreground);
+                                  padding: 6px 14px; border-radius: 99px; animation: bd-hit 420ms ease-out }
+
+  .bd-hint { min-height: 26px; font-size: clamp(14px, 1.8vw, 17px); font-weight: 600;
+             color: var(--destructive); display: flex; align-items: center }
+  .bd-hint[data-quiet="true"] { visibility: hidden }
+
+  /* keyboard map */
+  .bd-keys { display: grid; gap: clamp(4px, 0.8vw, 7px); justify-items: center }
+  .bd-keyrow { display: flex; gap: clamp(4px, 0.8vw, 7px); justify-content: center; flex-wrap: nowrap }
+  /* 실제 자판처럼 아랫줄로 갈수록 오른쪽으로 밀린다 */
+  .bd-keyrow[data-row="home"] { margin-left: clamp(10px, 2vw, 22px) }
+  .bd-keyrow[data-row="bottom"] { margin-left: clamp(24px, 5vw, 56px) }
+  .bd-key {
+    /* min-width:0 이라야 좁은 화면에서 flex-basis까지 줄어든다 */
+    flex: 0 1 clamp(38px, 7.2vw, 62px); min-width: 0; aspect-ratio: 1 / 1.05;
+    border-radius: var(--radius-lg); background: var(--secondary);
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    font-size: clamp(15px, 2.2vw, 21px); font-weight: 700; color: var(--secondary-foreground);
+    transition: background 140ms ease, color 140ms ease, transform 140ms ease, border-color 140ms ease;
+  }
+  .bd-key[data-inround="no"] { background: transparent; color: var(--muted-foreground); opacity: 0.45 }
+  .bd-key-finger { width: 7px; height: 7px; border-radius: 99px; background: currentColor; opacity: 0.35 }
+  .bd-key.pressed {
+    background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);
+    transform: translateY(-6px) scale(1.06);
+  }
+  .bd-key.pressed .bd-key-finger { opacity: 1 }
+  .bd-key.show {
+    background: var(--destructive); color: var(--primary-foreground); border-color: var(--destructive);
+    transform: translateY(-5px) scale(1.06);
+    animation: bd-keypulse 900ms ease-in-out infinite;
+  }
+  .bd-key.show .bd-key-finger { opacity: 1 }
+  @keyframes bd-keypulse {
+    0%, 100% { box-shadow: 0 0 0 4px color-mix(in oklch, var(--destructive) 24%, transparent) }
+    50%      { box-shadow: 0 0 0 11px color-mix(in oklch, var(--destructive) 7%, transparent) }
+  }
+
+  /* controls follow shadcn Button semantics */
+  .bd-actions { display: flex; flex-wrap: wrap; gap: 10px }
+  [data-component="Button"] {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 44px; padding: 0 20px; border-radius: var(--radius-lg);
+    border: 1px solid transparent; font: inherit; font-size: 16px; font-weight: 600;
+    cursor: pointer; transition: background 140ms ease, color 140ms ease;
+  }
+  [data-component="Button"][data-variant="default"] { background: var(--primary); color: var(--primary-foreground) }
+  [data-component="Button"][data-variant="default"]:hover { background: color-mix(in oklch, var(--primary) 82%, transparent) }
+  [data-component="Button"][data-variant="outline"] { background: var(--background); color: var(--foreground); border-color: var(--border) }
+  [data-component="Button"][data-variant="outline"]:hover { background: var(--muted) }
+  [data-component="Button"]:active { transform: translateY(1px) }
+  [data-component="Button"][data-size="sm"] { height: 32px; padding: 0 12px; font-size: 14px }
+  #btn-stop { justify-self: end }
+
+  /* ready screen: centred head, left-aligned guide in the middle, centred foot */
+  .bd-ready { min-height: clamp(360px, 54vh, 520px); gap: clamp(26px, 3.6vw, 44px) }
+  .bd-ready-head { text-align: center; display: grid; gap: 8px }
+  .bd-ready-mid { flex: 1; display: flex; flex-direction: column; justify-content: center }
+  .bd-ready-foot { display: flex; flex-direction: column; align-items: stretch; gap: clamp(26px, 4.6vw, 50px) }
+  .bd-ready-foot .bd-actions { justify-content: center }
+  .sh-vp-390 .bd-ready { min-height: 0; gap: 26px }
+
+  /* hand rest guide on the ready screen */
+  .bd-rest { display: grid; gap: 12px; width: max-content; max-width: 100%; margin-inline: auto }
+  [data-screen="round"] .bd-shell { min-height: clamp(460px, 70vh, 660px) }
+  .bd-rest-row { display: flex; gap: 10px; align-items: center; font-size: 15px; line-height: 1.6 }
+  .bd-rest-chip { font-weight: 600; font-size: 13px; background: var(--secondary); color: var(--secondary-foreground);
+                  border: 1px solid var(--border); border-radius: var(--radius-md);
+                  padding: 4px 10px; white-space: nowrap }
+
+  /* result */
+  .bd-result-body { display: flex; flex-direction: column; gap: clamp(16px, 2.4vw, 24px) }
+  .bd-verdict { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center }
+  .bd-verdict-mark { font-size: clamp(52px, 10vw, 76px); line-height: 1 }
+  .bd-verdict-head { font-size: clamp(24px, 3.6vw, 34px); font-weight: 800; margin: 0;
+                     letter-spacing: -0.02em; color: var(--foreground) }
+  .bd-verdict-sub { margin: 0; font-size: clamp(14px, 1.8vw, 17px); color: var(--muted-foreground) }
+
+  .bd-scores { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(10px, 1.6vw, 16px) }
+  .bd-score.is-lead { grid-column: 1 / -1 }
+  .bd-score { background: var(--background); border: 1px solid var(--border);
+              border-radius: var(--radius-xl); padding: clamp(14px, 2.2vw, 22px);
+              display: flex; flex-direction: column; gap: 6px;
+              align-items: center; text-align: center }
+  .bd-score-label { font-size: 13px; font-weight: 700; letter-spacing: 0.03em; color: var(--muted-foreground) }
+  .bd-score-value { font-family: var(--font-mono); font-weight: 800; font-variant-numeric: tabular-nums;
+                    letter-spacing: -0.03em; line-height: 1 }
+  .bd-score.is-lead .bd-score-value { font-size: clamp(48px, 9vw, 76px); color: var(--foreground) }
+  .bd-score.is-side .bd-score-value { font-size: clamp(32px, 6vw, 52px); color: var(--muted-foreground) }
+  .bd-score-note { font-size: 13px; color: var(--muted-foreground) }
+
+  .bd-goalbar { display: grid; gap: 8px; padding-top: 16px }
+  .bd-goalbar-track { position: relative; height: 14px; border-radius: 99px; background: var(--muted) }
+  .bd-goalbar-fill { height: 100%; border-radius: 99px; background: var(--primary) }
+  .bd-goalbar-track[data-record="true"] .bd-goalbar-fill { background: var(--foreground) }
+  .bd-goalbar-legend { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600;
+                       color: var(--muted-foreground) }
+  #result-actions { justify-content: center }
+
+  .bd-capture { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px }
+
+  /* ── 연습 범위 고르기 ─────────────────────────────────────────────── */
+  .bd-ranges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px }
+  .bd-range {
+    display: inline-flex; align-items: baseline; gap: 7px;
+    height: 38px; padding: 0 16px; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--background); color: var(--foreground);
+    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+  }
+  .bd-range:hover { background: var(--muted) }
+  .bd-range[aria-pressed="true"] {
+    background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);
+  }
+  .bd-range-count { font-size: 12px; font-weight: 700; opacity: 0.7 }
+
+  /* ── my own record, on the ready screen ───────────────────────────── */
+  .bd-best { display: flex; align-items: flex-end; justify-content: center;
+             gap: clamp(16px, 3vw, 34px) clamp(20px, 3.4vw, 38px); flex-wrap: wrap }
+  .bd-best-main { display: flex; align-items: baseline; gap: 6px }
+  .bd-best-label { font-size: 13px; font-weight: 700; letter-spacing: 0.03em;
+                   color: var(--muted-foreground) }
+  .bd-best-value { font-family: var(--font-mono); font-size: clamp(34px, 6vw, 54px); font-weight: 800;
+                   font-variant-numeric: tabular-nums; letter-spacing: -0.03em; line-height: 1 }
+  .bd-best-unit { font-size: 16px; font-weight: 700; color: var(--muted-foreground) }
+  .bd-best-note { margin: 0; font-size: 13px; color: var(--muted-foreground); text-align: center;
+                  flex-basis: 100%; padding-top: 4px }
+
+  /* recent rounds, read at a glance: bar height is the score, the line is the goal */
+  .bd-spark { position: relative; display: flex; align-items: flex-end; gap: 6px;
+              height: 54px; padding-bottom: 5px }
+  .bd-spark-bar { position: relative; width: clamp(14px, 2.6vw, 22px);
+                  border-radius: 4px 4px 2px 2px; background: var(--muted); min-height: 4px }
+  .bd-spark-bar::after {
+    content: attr(data-score) '점'; position: absolute; left: 50%; bottom: calc(100% + 7px);
+    transform: translateX(-50%); padding: 3px 8px; border-radius: var(--radius-md);
+    background: var(--foreground); color: var(--background);
+    font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity 120ms ease;
+  }
+  .bd-spark-bar:hover::after, .bd-spark-bar:focus-visible::after { opacity: 1 }
+  .bd-spark-bar:hover { background: var(--muted-foreground) }
+  .bd-spark-bar[data-best="true"]:hover { filter: brightness(1.15) }
+  .bd-spark-bar[data-best="true"] { background: var(--foreground) }
+  .bd-first-note { margin: 0; text-align: center; font-size: clamp(14px, 1.8vw, 17px);
+                   font-weight: 600; color: var(--foreground) }
+
+  .sh-vp-390 .bd-meters { grid-template-columns: 1fr auto }
+  .sh-vp-390 .bd-scores { grid-template-columns: 1fr }
+  .sh-vp-390 .bd-gauge { width: 84px }
+  .sh-vp-390 .bd-letter { font-size: 128px }
+  .sh-vp-390 .bd-key { flex: 0 1 26px; font-size: 13px }
+  .sh-vp-390 .bd-keys, .sh-vp-390 .bd-keyrow { gap: 3px }
+  .sh-vp-390 .bd-keyrow[data-row="home"] { margin-left: 6px }
+  .sh-vp-390 .bd-keyrow[data-row="bottom"] { margin-left: 14px }
+  .sh-vp-390 [data-screen="round"] .bd-shell { min-height: 0 }
+  @media (max-width: 560px) {
+    .bd-key { flex: 0 1 clamp(24px, 6.6vw, 62px) }
+    .bd-keys, .bd-keyrow { gap: 4px }
+    .bd-keyrow[data-row="home"] { margin-left: 8px }
+    .bd-keyrow[data-row="bottom"] { margin-left: 18px }
+    .bd-scores { grid-template-columns: 1fr }
+    .bd-meters { grid-template-columns: 1fr }
+    .bd-goal { justify-self: start }
+    .bd-gauge { width: 96px }
+  }
+
+</style>
+
+<header class="sh-bar">
+  <b>proto</b>
+  <label class="sh-control"><span class="sh-control-label">screen</span><select id="sh-screen"></select></label>
+  <span class="sh-spacer"></span>
+  <label class="sh-control"><span class="sh-control-label">state</span><select id="sh-state"></select></label>
+  <button id="sh-vp">vp: full (m)</button>
+  <div class="sh-theme" id="sh-theme" role="group" aria-label="theme (t)" hidden>
+    <button data-theme="light">light</button><button data-theme="dark">dark</button>
+  </div>
+</header>
+
+<main class="sh-stage">
+
+  <section data-screen="ready" data-title="준비" data-states="첫 판">
+    <div class="bd-shell bd-ready">
+      <div class="bd-ready-head">
+        <h1 class="bd-title">바다야, 타자 쳐볼까?</h1>
+        <p class="bd-lede">칠 자리를 고르고 60초 동안 쳐 봐요.</p>
+      </div>
+
+      <div class="bd-ranges" id="ranges" data-component="ToggleGroup" role="group"
+           aria-label="연습 범위"></div>
+
+      <div class="bd-best" data-when="Default">
+        <div class="bd-best-main">
+          <span class="bd-best-label">내 최고</span>
+          <span class="bd-best-value" id="best-value">340</span>
+          <span class="bd-best-unit">점</span>
+        </div>
+        <div class="bd-spark" id="ready-spark"></div>
+        <p class="bd-best-note" id="best-note">지난번에 세운 기록이에요. 오늘 넘어 볼까요?</p>
+      </div>
+
+      <p class="bd-first-note" id="first-note" data-when="첫 판" hidden>
+        홈 자리는 오늘이 첫 판이에요. 이번 점수가 이 범위의 첫 기록이 됩니다.
+      </p>
+
+      <div class="bd-ready-mid">
+        <div class="bd-rest">
+          <div class="bd-rest-row">
+            <span class="bd-rest-chip">점수</span>
+            <span>한 글자에 10점. 한 번에 3개, 5개, 7개씩 이어서 맞히면 보너스!</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bd-ready-foot">
+        <div class="bd-keys" id="ready-keys"></div>
+
+        <div class="bd-actions">
+          <button type="button" data-component="Button" data-variant="default" id="btn-start">시작하기</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section data-screen="round" data-title="연습">
+    <div class="bd-shell">
+      <input class="bd-capture" id="capture" aria-label="타자 입력" autocomplete="off">
+
+      <div class="bd-meters">
+        <span class="bd-meter-label">남은 시간</span>
+        <div class="bd-goal">
+          <span class="bd-meter-label">점수</span>
+          <div class="bd-gauge" id="gauge">
+            <div class="bd-gauge-fill" id="gauge-fill"></div>
+          </div>
+          <span class="bd-goal-count" id="goal-count">0 / 340</span>
+        </div>
+        <button type="button" tabindex="-1" data-component="Button" data-variant="outline"
+                data-size="sm" id="btn-stop">멈추기</button>
+        <div class="bd-timebar"><div class="bd-timebar-fill" id="timebar"></div></div>
+      </div>
+
+      <div class="bd-arena">
+        <div class="bd-streak" id="streak" data-quiet="true"></div>
+        <div class="bd-letter" id="letter">ㅏ</div>
+        <div class="bd-hint" id="hint" data-quiet="true"></div>
+      </div>
+
+      <div class="bd-keys" id="round-keys"></div>
+    </div>
+  </section>
+
+  <section data-screen="result" data-title="결과" data-states="신기록,조금만 더,첫 판">
+    <div class="bd-shell">
+      <div class="bd-result-body">
+        <div class="bd-verdict">
+          <div class="bd-verdict-mark" id="verdict-mark">🐬</div>
+          <h1 class="bd-verdict-head" id="verdict-head">아깝다!</h1>
+          <p class="bd-verdict-sub" id="verdict-sub">
+            내 최고 340점까지 20점. 거의 다 왔어요.
+          </p>
+        </div>
+
+        <div class="bd-scores">
+          <div class="bd-score is-lead">
+            <span class="bd-score-label">점수</span>
+            <span class="bd-score-value" id="score-total">320</span>
+            <span class="bd-score-note" id="score-note">맞힌 글자 10점에 연속 보너스를 더한 점수예요.</span>
+          </div>
+          <div class="bd-score is-side">
+            <span class="bd-score-label">정확도</span>
+            <span class="bd-score-value" id="score-accuracy">62%</span>
+            <span class="bd-score-note">처음 누른 키가 맞은 비율</span>
+          </div>
+          <div class="bd-score is-side">
+            <span class="bd-score-label">글자 수</span>
+            <span class="bd-score-value" id="score-speed">28</span>
+            <span class="bd-score-note">60초 동안 친 글자</span>
+          </div>
+        </div>
+
+        <div class="bd-goalbar">
+          <div class="bd-goalbar-track">
+            <div class="bd-goalbar-fill" id="goalbar" style="width: 94%"></div>
+          </div>
+          <div class="bd-goalbar-legend">
+            <span id="goalbar-left">내 점수 320점</span>
+            <span id="goalbar-right">내 최고 340점</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bd-actions" id="result-actions">
+        <button type="button" data-component="Button" data-variant="default" id="btn-again">한 번 더</button>
+        <button type="button" data-component="Button" data-variant="outline" id="btn-quit">오늘은 그만</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  /* ── 바다타자 product behavior (runs before the review chrome binds keys) ── */
+  /* 표준 두벌식. 세미콜론 자리에는 한글 자모가 없고, ㅔ는 윗줄 P다. */
+  const ROWS = [
+    { id: 'top', keys: [
+      { code: 'KeyQ', letter: 'ㅂ', finger: '왼손 새끼' },
+      { code: 'KeyW', letter: 'ㅈ', finger: '왼손 약지' },
+      { code: 'KeyE', letter: 'ㄷ', finger: '왼손 중지' },
+      { code: 'KeyR', letter: 'ㄱ', finger: '왼손 검지' },
+      { code: 'KeyT', letter: 'ㅅ', finger: '왼손 검지' },
+      { code: 'KeyY', letter: 'ㅛ', finger: '오른손 검지' },
+      { code: 'KeyU', letter: 'ㅕ', finger: '오른손 검지' },
+      { code: 'KeyI', letter: 'ㅑ', finger: '오른손 중지' },
+      { code: 'KeyO', letter: 'ㅐ', finger: '오른손 약지' },
+      { code: 'KeyP', letter: 'ㅔ', finger: '오른손 새끼' },
+    ] },
+    { id: 'home', keys: [
+      { code: 'KeyA', letter: 'ㅁ', finger: '왼손 새끼', rest: true },
+      { code: 'KeyS', letter: 'ㄴ', finger: '왼손 약지', rest: true },
+      { code: 'KeyD', letter: 'ㅇ', finger: '왼손 중지', rest: true },
+      { code: 'KeyF', letter: 'ㄹ', finger: '왼손 검지', rest: true },
+      { code: 'KeyG', letter: 'ㅎ', finger: '왼손 검지' },
+      { code: 'KeyH', letter: 'ㅗ', finger: '오른손 검지' },
+      { code: 'KeyJ', letter: 'ㅓ', finger: '오른손 검지', rest: true },
+      { code: 'KeyK', letter: 'ㅏ', finger: '오른손 중지', rest: true },
+      { code: 'KeyL', letter: 'ㅣ', finger: '오른손 약지', rest: true },
+    ] },
+    { id: 'bottom', keys: [
+      { code: 'KeyZ', letter: 'ㅋ', finger: '왼손 새끼' },
+      { code: 'KeyX', letter: 'ㅌ', finger: '왼손 약지' },
+      { code: 'KeyC', letter: 'ㅊ', finger: '왼손 중지' },
+      { code: 'KeyV', letter: 'ㅍ', finger: '왼손 검지' },
+      { code: 'KeyB', letter: 'ㅠ', finger: '왼손 검지' },
+      { code: 'KeyN', letter: 'ㅜ', finger: '오른손 검지' },
+      { code: 'KeyM', letter: 'ㅡ', finger: '오른손 검지' },
+    ] },
+  ];
+  const KEYS = ROWS.flatMap(row => row.keys.map(k => ({ ...k, row: row.id })));
+
+  /* 아이가 고르는 연습 범위. 손이 놓인 자리에서 한 겹씩 넓어진다. */
+  const RANGES = [
+    { id: 'rest', label: '홈 자리', pick: k => k.rest },
+    { id: 'home', label: '가운뎃줄', pick: k => k.row === 'home' },
+    { id: 'upper', label: '윗줄까지', pick: k => k.row === 'home' || k.row === 'top' },
+    { id: 'all', label: '자판 전체', pick: () => true },
+  ];
+  RANGES.forEach(r => { r.keys = KEYS.filter(r.pick) });
+  let range = RANGES[0];
+  const inRange = code => range.keys.some(k => k.code === code);
+  const ROUND_SECONDS = 60;
+  const GOAL_SCORE = 300;
+  const BASE_POINT = 10;
+  const BONUS_STEP = 20;
+  const BONUS_CAP = 5;   // bonus stops growing at +100
+  const SPARK_COUNT = 5;
+
+  /* finished rounds the child has already played. Seeded so the review starts
+     with a history; a round played here is appended to it. */
+  const RECORD_KEY = 'bada.records.v2';
+  const SEED = {
+    rest: [
+      { score: 120, accuracy: 38, letters: 12 },
+      { score: 210, accuracy: 52, letters: 19 },
+      { score: 190, accuracy: 45, letters: 19 },
+      { score: 260, accuracy: 58, letters: 24 },
+      { score: 340, accuracy: 66, letters: 30 },
+    ],
+    home: [
+      { score: 140, accuracy: 41, letters: 14 },
+      { score: 180, accuracy: 47, letters: 18 },
+      { score: 250, accuracy: 55, letters: 23 },
+    ],
+    upper: [
+      { score: 90, accuracy: 29, letters: 9 },
+    ],
+    all: [],
+  };
+  let store = (() => {
+    try {
+      const raw = localStorage.getItem(RECORD_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) { /* private mode */ }
+    return JSON.parse(JSON.stringify(SEED));
+  })();
+  function rounds() { return store[range.id] || (store[range.id] = []) }
+  function keepRecords() {
+    RANGES.forEach(r => { store[r.id] = (store[r.id] || []).slice(-40) });
+    try { localStorage.setItem(RECORD_KEY, JSON.stringify(store)) } catch (e) {}
+  }
+  function bestScore() { return rounds().reduce((m, r) => Math.max(m, r.score), 0) }
+  let recordJustSet = false;
+  const fmt = n => Math.round(n).toLocaleString('ko-KR');
+  /* 받침 유무에 따라 은/는을 붙인다 */
+  function topic(word) {
+    const c = word.charCodeAt(word.length - 1);
+    const hasFinal = c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 !== 0;
+    return word + (hasFinal ? '은' : '는');
+  }
+
+  // a bonus lands on the 3rd, 5th, 7th ... letter hit on the first press
+  function bonusFor(streak) {
+    if (streak < 3 || streak % 2 === 0) return 0;
+    return BONUS_STEP * Math.min((streak - 1) / 2, BONUS_CAP);
+  }
+
+  function paintKeys(host) {
+    host.innerHTML = '';
+    ROWS.forEach(row => {
+      const line = document.createElement('div');
+      line.className = 'bd-keyrow';
+      line.dataset.row = row.id;
+      row.keys.forEach(k => {
+        const el = document.createElement('div');
+        el.className = 'bd-key';
+        el.dataset.component = 'new:KeyCap';
+        el.dataset.code = k.code;
+        el.innerHTML = '<span>' + k.letter + '</span><span class="bd-key-finger"></span>';
+        line.append(el);
+      });
+      host.append(line);
+    });
+    markRange(host);
+  }
+
+  /* 고른 범위 밖의 키는 흐리게 남겨 둔다. 자판 전체의 모양은 늘 보인다. */
+  function markRange(host) {
+    host.querySelectorAll('.bd-key').forEach(el => {
+      el.dataset.inround = inRange(el.dataset.code) ? 'yes' : 'no';
+    });
+  }
+  function markAllRanges() {
+    markRange(document.getElementById('ready-keys'));
+    markRange(document.getElementById('round-keys'));
+  }
+  paintKeys(document.getElementById('ready-keys'));
+  paintKeys(document.getElementById('round-keys'));
+
+  const capture = document.getElementById('capture');
+  const letterEl = document.getElementById('letter');
+  const hintEl = document.getElementById('hint');
+  const streakEl = document.getElementById('streak');
+  const timebar = document.getElementById('timebar');
+  const goalCount = document.getElementById('goal-count');
+  const gauge = document.getElementById('gauge');
+  const gaugeFill = document.getElementById('gauge-fill');
+  const roundKeys = document.getElementById('round-keys');
+
+  /* one bar, two marks: the pass line and the child's own best */
+  /* 게이지가 가리키는 선은 아이 자신의 최고 기록 하나다. 다만 기록이 없거나
+     아직 아주 낮은 범위에서는 게이지가 시작하자마자 꽉 차 버리므로,
+     적어도 300점까지는 눈금을 벌려 둔다. */
+  function scoreCeiling(best) { return Math.max(best, GOAL_SCORE) }
+
+  /* 최고 기록의 이만큼을 넘기면 진 판이 아니라 아까운 판으로 돌려준다. */
+  const NEAR_BEST = 0.9;
+
+  function paintReady() {
+    const list = rounds();
+    const best = bestScore();
+    const recent = list.slice(-SPARK_COUNT);
+    document.getElementById('best-value').textContent = fmt(best);
+    document.getElementById('best-note').textContent = recordJustSet
+      ? '방금 세운 기록이에요. 오늘 또 넘어 볼까요?'
+      : '지난번에 ' + range.label + '에서 세운 기록이에요. 오늘 넘어 볼까요?';
+    document.getElementById('first-note').textContent =
+      topic(range.label) + ' 오늘이 첫 판이에요. 이번 점수가 이 범위의 첫 기록이 됩니다.';
+
+    /* 범위를 바꾸면 기록이 있는 범위인지에 따라 화면이 갈린다 */
+    if (window.prototypeShell && prototypeShell.getScreen() === 'ready') {
+      prototypeShell.setState(list.length ? 'Default' : '첫 판');
+    }
+
+    const host = document.getElementById('ready-spark');
+    const top = Math.max(best, GOAL_SCORE) * 1.1;
+    host.innerHTML = '';
+    recent.forEach(r => {
+      const bar = document.createElement('span');
+      bar.className = 'bd-spark-bar';
+      bar.style.height = Math.max(4, r.score / top * 44) + 'px';
+      bar.dataset.score = fmt(r.score);
+      bar.tabIndex = 0;
+      if (r.score === best) bar.dataset.best = 'true';
+      host.append(bar);
+    });
+  }
+  /* 범위 고르기. 고른 범위가 그 판의 낱자 묶음이자 기록이 쌓이는 자리다. */
+  const rangeHost = document.getElementById('ranges');
+  function paintRanges() {
+    rangeHost.innerHTML = '';
+    RANGES.forEach(r => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'bd-range';
+      chip.dataset.component = 'ToggleGroupItem';
+      chip.setAttribute('aria-pressed', String(r === range));
+      chip.innerHTML = '<span>' + r.label + '</span>' +
+                       '<span class="bd-range-count">' + r.keys.length + '자</span>';
+      chip.onclick = () => {
+        if (r === range) return;
+        range = r;
+        paintRanges();
+        markAllRanges();
+        paintReady();
+      };
+      rangeHost.append(chip);
+    });
+  }
+  paintRanges();
+  paintReady();
+
+  let round = null;
+  let ticker = null;
+
+  /* 목표 달성과 신기록은 "사건"이라 각자 자기 시간을 갖는다. 사건이 자리를 지키는
+     동안 들어온 다음 사건은 줄을 서고, 연속·보너스 같은 일상 표시는 기다린다. */
+  const EVENT_HOLD = 1400;
+  let eventUntil = 0;
+  let eventQueue = [];
+  let eventTimer = null;
+
+  function paintMessage(text, cheer) {
+    streakEl.dataset.quiet = text ? 'false' : 'true';
+    streakEl.dataset.cheer = text && cheer ? 'true' : 'false';
+    streakEl.textContent = text;
+    if (text && cheer) {   // 같은 축하가 이어져도 등장 동작을 다시 태운다
+      streakEl.style.animation = 'none';
+      void streakEl.offsetWidth;
+      streakEl.style.animation = '';
+    }
+  }
+
+  function showEvent(text) {
+    if (Date.now() < eventUntil) { eventQueue.push(text); return; }
+    paintMessage(text, true);
+    eventUntil = Date.now() + EVENT_HOLD;
+    runQueue();
+  }
+
+  function runQueue() {
+    clearTimeout(eventTimer);
+    eventTimer = setTimeout(() => {
+      if (!round) return;
+      const next = eventQueue.shift();
+      if (next === undefined) { eventUntil = 0; return; }
+      paintMessage(next, true);
+      eventUntil = Date.now() + EVENT_HOLD;
+      runQueue();
+    }, EVENT_HOLD);
+  }
+
+  /* 일상 표시는 사건이 끝난 뒤에만 자리를 잡는다. */
+  function showRoutine(text, cheer) {
+    if (Date.now() < eventUntil) return;
+    paintMessage(text, cheer);
+  }
+
+  function resetMessages() {
+    clearTimeout(eventTimer);
+    eventUntil = 0;
+    eventQueue = [];
+    paintMessage('', false);
+  }
+
+  function newTarget(previous) {
+    const pool = range.keys;
+    if (pool.length <= 1) return pool[0];
+    let next = previous;
+    while (next === previous) next = pool[Math.floor(Math.random() * pool.length)];
+    return next;
+  }
+
+  function clearHint() {
+    hintEl.dataset.quiet = 'true';
+    hintEl.textContent = '';
+    roundKeys.querySelectorAll('.bd-key.show').forEach(el => el.classList.remove('show'));
+  }
+
+  function renderRound() {
+    const left = Math.max(0, round.endsAt - Date.now());
+    timebar.style.width = (left / (ROUND_SECONDS * 1000) * 100).toFixed(2) + '%';
+    goalCount.textContent = fmt(round.score) + ' / ' + fmt(round.top);
+    gaugeFill.style.width = Math.min(100, round.score / round.top * 100).toFixed(1) + '%';
+    if (left <= 0) finishRound();
+  }
+
+  function startRound() {
+    const best = bestScore();
+    round = { endsAt: Date.now() + ROUND_SECONDS * 1000, score: 0, hits: 0, shown: 0,
+              firstTry: 0, dirty: false, streak: 0, target: null,
+              best: best, top: scoreCeiling(best), recordHit: false };
+    gauge.dataset.record = 'false';
+    round.target = newTarget(null);
+    round.shown = 1;
+    letterEl.textContent = round.target.letter;
+    letterEl.className = 'bd-letter';
+    resetMessages();
+    clearHint();
+    renderRound();
+    prototypeShell.showScreen('round');
+    capture.focus();
+    clearInterval(ticker);
+    ticker = setInterval(renderRound, 200);
+  }
+
+  function paintResult(score, accuracy, letters, prevBest) {
+    const isRecord = prevBest > 0 && score > prevBest;
+    const first = prevBest <= 0;
+
+    const mark = document.getElementById('verdict-mark');
+    const head = document.getElementById('verdict-head');
+    const sub = document.getElementById('verdict-sub');
+    if (isRecord) {
+      mark.textContent = '🐳';
+      head.textContent = '신기록!';
+      sub.textContent = '지난 최고 ' + fmt(prevBest) + '점을 ' + fmt(score - prevBest) + '점 넘었어요.';
+    } else if (first) {
+      mark.textContent = '🐬';
+      head.textContent = '첫 기록!';
+      sub.textContent = fmt(score) + '점이 내 첫 기록이에요. 다음 판부터 이 점수를 넘어 봐요.';
+    } else if (score === prevBest) {
+      mark.textContent = '🐬';
+      head.textContent = '내 최고와 똑같아요!';
+      sub.textContent = '한 글자만 더 맞히면 신기록이에요.';
+    } else if (score >= prevBest * NEAR_BEST) {
+      mark.textContent = '🐬';
+      head.textContent = '아깝다!';
+      sub.textContent = '내 최고 ' + fmt(prevBest) + '점까지 ' + fmt(prevBest - score) +
+        '점. 거의 다 왔어요.';
+    } else {
+      mark.textContent = '🐚';
+      head.textContent = '조금만 더!';
+      sub.textContent = '내 최고 ' + fmt(prevBest) + '점까지 ' + fmt(prevBest - score) +
+        '점 남았어요. 이어서 맞히면 보너스가 붙어요.';
+    }
+
+    document.getElementById('score-total').textContent = fmt(score);
+    document.getElementById('score-accuracy').textContent = accuracy + '%';
+    document.getElementById('score-speed').textContent = String(letters);
+
+    const top = first ? Math.max(score, GOAL_SCORE) : Math.max(scoreCeiling(prevBest), score);
+    document.getElementById('goalbar').style.width =
+      (top > 0 ? score / top * 100 : 0).toFixed(1) + '%';
+    document.querySelector('.bd-goalbar-track').dataset.record = (isRecord || first) ? 'true' : 'false';
+    document.getElementById('goalbar-left').textContent = '내 점수 ' + fmt(score) + '점';
+    document.getElementById('goalbar-right').textContent =
+      first ? '' : (isRecord ? '지난 최고 ' + fmt(prevBest) + '점' : '내 최고 ' + fmt(prevBest) + '점');
+  }
+
+  function resultState(score, prevBest) {
+    if (prevBest <= 0) return '첫 판';
+    if (score > prevBest) return '신기록';
+    if (score >= prevBest * NEAR_BEST) return 'Default';
+    return '조금만 더';
+  }
+
+  function finishRound() {
+    clearInterval(ticker);
+    if (!round) return;
+    const accuracy = round.shown ? Math.round(round.firstTry / round.shown * 100) : 0;
+    const finished = { score: round.score, accuracy: accuracy, letters: round.hits };
+    const prevBest = round.best;
+
+    round = null;
+    resetMessages();
+    capture.blur();
+
+    rounds().push(finished);
+    recordJustSet = finished.score >= bestScore();
+    keepRecords();
+    paintReady();
+    paintResult(finished.score, finished.accuracy, finished.letters, prevBest);
+    prototypeShell.showScreen('result');
+    prototypeShell.setState(resultState(finished.score, prevBest));
+  }
+
+  /* forced result data, so the review can reach each ending without playing it */
+  const RESULT_SAMPLES = {
+    'Default': { score: 320, accuracy: 62, letters: 28, prevBest: 340 },
+    '신기록': { score: 410, accuracy: 71, letters: 33, prevBest: 340 },
+    '조금만 더': { score: 190, accuracy: 48, letters: 17, prevBest: 340 },
+    '첫 판': { score: 140, accuracy: 39, letters: 14, prevBest: 0 },
+  };
+  document.getElementById('sh-state').addEventListener('change', event => {
+    const sample = RESULT_SAMPLES[event.target.value];
+    if (sample && prototypeShell.getScreen() === 'result') {
+      paintResult(sample.score, sample.accuracy, sample.letters, sample.prevBest);
+    }
+  });
+
+  const TYPING_KEY = /^(Key[A-Z]|Digit[0-9]|Semicolon|Quote|Comma|Period|Slash|Minus|Equal|BracketLeft|BracketRight|Backslash|Backquote|Space)$/;
+
+  function handleKey(event) {
+    if (!round) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!TYPING_KEY.test(event.code)) return;
+    event.preventDefault();
+    const pressed = KEYS.find(k => k.code === event.code);
+
+    if (pressed && pressed.letter === round.target.letter) {
+      round.hits++;
+      round.score += BASE_POINT;
+      let bonus = 0;
+      if (!round.dirty) {
+        round.firstTry++;
+        round.streak++;
+        bonus = bonusFor(round.streak);
+        round.score += bonus;
+      }
+      clearHint();
+      const crossedRecord = round.best > 0 && !round.recordHit && round.score > round.best;
+      if (crossedRecord) {
+        round.recordHit = true;
+        gauge.dataset.record = 'true';
+        showEvent('신기록! 내 최고를 넘었어요');
+      } else {
+        if (bonus) showRoutine(round.streak + '개 연속 +' + bonus + '점!', true);
+        else if (round.streak >= 2) showRoutine(round.streak + '개 연속', false);
+        else showRoutine('', false);
+      }
+      round.target = newTarget(round.target);
+      round.dirty = false;
+      round.shown++;
+      letterEl.textContent = round.target.letter;
+      letterEl.className = 'bd-letter hit';
+      renderRound();
+      return;
+    }
+
+    round.dirty = true;
+    round.streak = 0;
+    showRoutine('', false);
+    letterEl.className = 'bd-letter miss';
+    const answer = KEYS.find(k => k.letter === round.target.letter);
+    hintEl.dataset.quiet = 'false';
+    hintEl.textContent = answer.finger + '로 ' + answer.letter + ' 를 눌러요';
+    roundKeys.querySelectorAll('.bd-key.show').forEach(el => el.classList.remove('show'));
+    roundKeys.querySelector('[data-code="' + answer.code + '"]').classList.add('show');
+  }
+
+  capture.addEventListener('keydown', handleKey);
+  document.querySelector('[data-screen="round"]').addEventListener('pointerdown', () => capture.focus());
+
+  /* on the ready screen nothing is judged yet: a press just lights its own key */
+  const readyKeys = document.getElementById('ready-keys');
+  addEventListener('keydown', event => {
+    if (prototypeShell.getScreen() !== 'ready') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const key = readyKeys.querySelector('[data-code="' + event.code + '"]');
+    if (!key) return;
+    event.preventDefault();
+    readyKeys.querySelectorAll('.bd-key.pressed').forEach(el => el.classList.remove('pressed'));
+    key.classList.add('pressed');
+  });
+  addEventListener('keyup', event => {
+    const key = readyKeys.querySelector('[data-code="' + event.code + '"]');
+    if (key) key.classList.remove('pressed');
+  });
+
+  document.getElementById('btn-start').onclick = startRound;
+  document.getElementById('btn-again').onclick = startRound;
+  function backToReady() {
+    clearInterval(ticker);
+    round = null;
+    resetMessages();
+    capture.blur();
+    paintReady();
+    prototypeShell.showScreen('ready');
+  }
+  document.getElementById('btn-stop').onclick = backToReady;
+  document.getElementById('btn-quit').onclick = backToReady;
+</script>
+
+<script>
+  const stage = document.querySelector('.sh-stage');
+  const screens = [...stage.querySelectorAll('[data-screen]')];
+  const screenSelect = document.getElementById('sh-screen');
+  const stateSelect = document.getElementById('sh-state');
+  const vpBtn = document.getElementById('sh-vp');
+  const themeCtl = document.getElementById('sh-theme');
+  const themeBtns = [...themeCtl.querySelectorAll('button')];
+  let current = null;
+  let currentStates = [];
+
+  screens.forEach(s => {
+    const option = document.createElement('option');
+    option.textContent = s.dataset.title || s.dataset.screen;
+    option.value = s.dataset.screen;
+    screenSelect.append(option);
+  });
+  screenSelect.onchange = () => show(screenSelect.value);
+
+  function show(slug) {
+    current = screens.find(s => s.dataset.screen === slug) || screens[0];
+    screens.forEach(s => s.hidden = s !== current);
+    screenSelect.value = current.dataset.screen;
+    history.replaceState(null, '', '#' + current.dataset.screen);
+    buildStates();
+  }
+
+  function buildStates() {
+    const declared = (current.dataset.states || '').split(',').map(x => x.trim()).filter(Boolean);
+    currentStates = ['Default', ...declared.filter(name => name !== 'Default')];
+    stateSelect.innerHTML = '';
+    currentStates.forEach(name => {
+      const option = document.createElement('option');
+      option.textContent = name;
+      option.value = name;
+      stateSelect.append(option);
+    });
+    applyState('Default');
+  }
+
+  function applyState(name) {
+    const active = currentStates.includes(name) ? name : 'Default';
+    current.querySelectorAll('[data-when]').forEach(el => {
+      el.hidden = !el.dataset.when.split(',').map(x => x.trim()).includes(active);
+    });
+    stateSelect.value = active;
+  }
+  stateSelect.onchange = () => applyState(stateSelect.value);
+
+  window.prototypeShell = {
+    showScreen: show,
+    setState: applyState,
+    getScreen: () => current?.dataset.screen,
+    getState: () => stateSelect.value
+  };
+
+  const VPS = ['full', '390', '768'];
+  let vp = VPS.find(v => document.body.classList.contains('sh-vp-' + v)) || 'full';
+  function applyVp() {
+    VPS.forEach(v => document.body.classList.toggle('sh-vp-' + v, v === vp && v !== 'full'));
+    vpBtn.textContent = 'vp: ' + vp + ' (m)';
+    vpBtn.classList.toggle('on', vp !== 'full');
+  }
+  vpBtn.onclick = () => { vp = VPS[(VPS.indexOf(vp) + 1) % VPS.length]; applyVp(); };
+  applyVp();
+
+  const hasDark = [...document.styleSheets].some(sheet => {
+    try {
+      return [...sheet.cssRules].some(rule => (rule.selectorText || '')
+        .split(',').some(part => /\.sh-theme-dark$/.test(part.trim())));
+    } catch { return false }
+  });
+  let dark = false;
+  function applyTheme() {
+    document.documentElement.classList.toggle('sh-theme-dark', dark);
+    document.body.classList.toggle('sh-theme-dark', dark);
+    themeBtns.forEach(b => b.classList.toggle('on', (b.dataset.theme === 'dark') === dark));
+  }
+  themeCtl.hidden = !hasDark;
+  themeBtns.forEach(b => b.onclick = () => { dark = b.dataset.theme === 'dark'; applyTheme(); });
+  applyTheme();
+
+  addEventListener('keydown', e => {
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const i = screens.indexOf(current);
+    if (e.key === 'ArrowRight') show(screens[(i + 1) % screens.length].dataset.screen);
+    if (e.key === 'ArrowLeft') show(screens[(i - 1 + screens.length) % screens.length].dataset.screen);
+    if (e.key === 'm') vpBtn.click();
+    if (e.key === 't' && !themeCtl.hidden) { dark = !dark; applyTheme(); }
+  });
+
+  addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+</script>
