@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { RiSparklingLine } from "@remixicon/react";
+import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -42,7 +42,7 @@ export default function Home() {
         </div>
         <div className="flex flex-col items-center gap-4 text-base font-medium sm:flex-row sm:items-start">
           <Button size="lg">
-            <RiSparklingLine data-icon="inline-start" />
+            <Sparkles data-icon="inline-start" />
             Get started
           </Button>
           <a
