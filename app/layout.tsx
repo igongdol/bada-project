@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, inter.variable, instrumentSansHeading.variable)}
+      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, instrumentSansHeading.variable, "font-sans", inter.variable)}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
