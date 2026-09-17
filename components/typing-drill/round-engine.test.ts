@@ -134,7 +134,7 @@ describe("applyKeyPress", () => {
     const random = fakeRandom();
     let state = startRound(random);
     expect(state.goalHit).toBe(false);
-    // 충분히 많이 맞혀서 700점을 넘긴다
+    // 충분히 많이 맞혀서 목표 점수를 넘긴다
     const map: Record<string, string> = { ㅁ: "KeyA", ㄹ: "KeyF" };
     for (let i = 0; i < 60 && state.score < GOAL_SCORE; i++) {
       state = applyKeyPress(state, map[state.target.letter], random);
@@ -156,7 +156,7 @@ describe("finishRound", () => {
     expect(result.accuracy).toBe(0);
   });
 
-  test("700점 이상이면 목표를 채운 것으로 본다", () => {
+  test("목표 점수 이상이면 목표를 채운 것으로 본다", () => {
     const random = fakeRandom();
     let state = startRound(random);
     const map: Record<string, string> = { ㅁ: "KeyA", ㄹ: "KeyF" };
@@ -166,7 +166,7 @@ describe("finishRound", () => {
     expect(finishRound(state).met).toBe(true);
   });
 
-  test("700점 미만이면 목표를 못 채운 것으로 본다", () => {
+  test("목표 점수 미만이면 목표를 못 채운 것으로 본다", () => {
     const random = fakeRandom();
     const state = startRound(random);
     expect(finishRound(state).met).toBe(false);

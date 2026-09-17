@@ -25,7 +25,7 @@ export const KEYS: DrillKey[] = [
 export const DRILL_KEYS = KEYS.filter((key) => key.inRound);
 
 export const ROUND_SECONDS = 60;
-export const GOAL_SCORE = 700;
+export const GOAL_SCORE = 300;
 export const BASE_POINT = 10;
 
 const BONUS_STEP = 20;

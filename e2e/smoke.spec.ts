@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+// round-engine.ts의 GOAL_SCORE와 같다. 값이 바뀌면 여기도 맞춰 바꾼다.
+const GOAL_SCORE = 300;
+
 // 판정 대상 여덟 낱자와 물리 키(US 배열 기준)의 대응. round-engine.ts의 KEYS와 같다.
 const LETTER_TO_KEY: Record<string, string> = {
   ㅁ: "a",
@@ -28,13 +31,13 @@ test("맞는 키를 누르면 다음 낱자로 넘어가고 점수가 오른다"
   await page.goto("/");
   await page.getByRole("button", { name: "시작하기" }).click();
 
-  await expect(page.getByTestId("score-count")).toHaveText("0 / 700");
+  await expect(page.getByTestId("score-count")).toHaveText(`0 / ${GOAL_SCORE}`);
   const letter = await page.getByTestId("letter").textContent();
   const key = LETTER_TO_KEY[letter!.trim()];
 
   await page.keyboard.press(key);
 
-  await expect(page.getByTestId("score-count")).toHaveText("10 / 700");
+  await expect(page.getByTestId("score-count")).toHaveText(`10 / ${GOAL_SCORE}`);
 });
 
 test("연습 대상이 아닌 키를 누르면 틀린 것으로 판정하고 정답 손가락을 알려준다", async ({
@@ -48,7 +51,7 @@ test("연습 대상이 아닌 키를 누르면 틀린 것으로 판정하고 정
   await page.keyboard.press("g");
 
   await expect(page.getByTestId("hint")).toContainText("를 눌러요");
-  await expect(page.getByTestId("score-count")).toHaveText("0 / 700");
+  await expect(page.getByTestId("score-count")).toHaveText(`0 / ${GOAL_SCORE}`);
   // 틀렸으니 같은 낱자에 머문다.
   await expect(page.getByTestId("letter")).toHaveText(letterBefore!);
 });
@@ -86,7 +89,7 @@ test("60초가 지나면 결과 화면에서 점수와 정확도, 목표 달성 
   await expect(page.getByTestId("letter")).toBeVisible();
 });
 
-test("700점을 넘기면 목표 달성 문구가 뜨고 결과 화면도 성공으로 표시한다", async ({
+test("목표 점수를 넘기면 목표 달성 문구가 뜨고 결과 화면도 성공으로 표시한다", async ({
   page,
 }) => {
   // 60초 타이머를 얼려 두고 키 입력만으로 점수를 올린다. 마지막에만 시간을 넘긴다.
@@ -94,15 +97,15 @@ test("700점을 넘기면 목표 달성 문구가 뜨고 결과 화면도 성공
   await page.goto("/");
   await page.getByRole("button", { name: "시작하기" }).click();
 
-  // 계속 맞혀서 점수를 목표(700점) 위로 올린다.
+  // 계속 맞혀서 점수를 목표 위로 올린다.
   let score = 0;
-  for (let i = 0; i < 80 && score < 700; i++) {
+  for (let i = 0; i < 80 && score < GOAL_SCORE; i++) {
     const letter = (await page.getByTestId("letter").textContent())!.trim();
     await page.keyboard.press(LETTER_TO_KEY[letter]);
     const text = await page.getByTestId("score-count").textContent();
     score = Number(text!.split("/")[0].trim());
   }
-  expect(score).toBeGreaterThanOrEqual(700);
+  expect(score).toBeGreaterThanOrEqual(GOAL_SCORE);
 
   // 목표를 넘긴 순간 화면에 한 번 표시된다.
   await expect(page.locator("body")).toContainText("목표 달성");
@@ -113,5 +116,5 @@ test("700점을 넘기면 목표 달성 문구가 뜨고 결과 화면도 성공
   const resultScore = Number(
     await page.getByTestId("result-score-value").textContent()
   );
-  expect(resultScore).toBeGreaterThanOrEqual(700);
+  expect(resultScore).toBeGreaterThanOrEqual(GOAL_SCORE);
 });
