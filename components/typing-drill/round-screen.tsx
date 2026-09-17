@@ -6,19 +6,21 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { KeyboardRow } from "./keyboard-row";
-import { GOAL_SCORE, ROUND_SECONDS, type DrillKey } from "./round-engine";
+import { ROUND_SECONDS, type DrillKey, type PracticeRange } from "./round-engine";
 import styles from "./typing-drill.module.css";
-
-const GOAL_DOT_COUNT = 10;
 
 type StreakMessage = { text: string; cheer: boolean } | null;
 
 type RoundScreenProps = {
   captureRef: RefObject<HTMLInputElement | null>;
+  range: PracticeRange;
   target: DrillKey;
   score: number;
+  ceiling: number;
+  recordHit: boolean;
   timeLeftMs: number;
   streakMessage: StreakMessage;
+  messageSeq: number;
   hint: { finger: string; letter: string } | null;
   lastOutcome: "hit" | "miss" | null;
   pressSeq: number;
@@ -28,10 +30,14 @@ type RoundScreenProps = {
 
 export function RoundScreen({
   captureRef,
+  range,
   target,
   score,
+  ceiling,
+  recordHit,
   timeLeftMs,
   streakMessage,
+  messageSeq,
   hint,
   lastOutcome,
   pressSeq,
@@ -42,10 +48,7 @@ export function RoundScreen({
     0,
     Math.min(100, (timeLeftMs / (ROUND_SECONDS * 1000)) * 100)
   );
-  const filledDots = Math.min(
-    GOAL_DOT_COUNT,
-    Math.round((score / GOAL_SCORE) * GOAL_DOT_COUNT)
-  );
+  const gaugePercent = Math.min(100, (score / ceiling) * 100);
 
   return (
     <div
@@ -68,22 +71,20 @@ export function RoundScreen({
           <span className="text-xs font-semibold tracking-wide text-muted-foreground">
             점수
           </span>
-          <div className="flex gap-1">
-            {Array.from({ length: GOAL_DOT_COUNT }, (_, i) => (
-              <span
-                key={i}
-                className={cn(
-                  "size-2.5 rounded-full bg-muted transition-[background,transform] duration-150",
-                  i < filledDots && "scale-[1.15] bg-primary"
-                )}
-              />
-            ))}
+          <div className="relative h-3 w-[clamp(110px,20vw,220px)] overflow-hidden rounded-full bg-muted">
+            <div
+              className={cn(
+                "h-full rounded-full transition-[width] duration-200 ease-out",
+                recordHit ? "bg-foreground" : "bg-primary"
+              )}
+              style={{ width: `${gaugePercent}%` }}
+            />
           </div>
           <span
             data-testid="score-count"
             className="font-mono text-[15px] font-bold tabular-nums"
           >
-            {score} / {GOAL_SCORE}
+            {score} / {ceiling}
           </span>
         </div>
         <Button
@@ -106,7 +107,7 @@ export function RoundScreen({
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
         <div
-          key={`streak-${pressSeq}`}
+          key={`streak-${messageSeq}`}
           className={cn(
             "flex min-h-8 items-center text-[15px] font-bold text-primary",
             !streakMessage && "opacity-0",
@@ -139,11 +140,11 @@ export function RoundScreen({
             !hint && "invisible"
           )}
         >
-          {hint ? `${hint.finger}로 ${hint.letter} 를 눌러요` : " "}
+          {hint ? `${hint.finger}로 ${hint.letter} 를 눌러요` : " "}
         </div>
       </div>
 
-      <KeyboardRow alertCode={hint ? target.code : null} />
+      <KeyboardRow range={range} alertCode={hint ? target.code : null} />
     </div>
   );
 }

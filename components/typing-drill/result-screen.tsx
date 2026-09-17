@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { GOAL_SCORE, type RoundResult } from "./round-engine";
+import { judgeRound, scoreCeiling, type RoundResult } from "./round-engine";
 
 type ResultScreenProps = {
   result: RoundResult;
@@ -10,26 +10,32 @@ type ResultScreenProps = {
 };
 
 export function ResultScreen({ result, onAgain, onQuit }: ResultScreenProps) {
-  const { score, accuracy, hits, met } = result;
-  const goalPercent = Math.min(100, (score / GOAL_SCORE) * 100);
+  const { score, accuracy, hits, bestBefore } = result;
+  const verdict = judgeRound(score, bestBefore);
+  const isRecordLike = verdict === "record" || verdict === "first";
+
+  const top = verdict === "first" ? Math.max(score, scoreCeiling(0)) : Math.max(scoreCeiling(bestBefore), score);
+  const goalPercent = top > 0 ? Math.min(100, (score / top) * 100) : 0;
+
+  const { mark, head, sub } = describeVerdict(verdict, score, bestBefore);
+  const rightLegend =
+    verdict === "first"
+      ? ""
+      : verdict === "record"
+        ? `지난 최고 ${bestBefore.toLocaleString("ko-KR")}점`
+        : `내 최고 ${bestBefore.toLocaleString("ko-KR")}점`;
 
   return (
     <div className="flex flex-col gap-[clamp(16px,2.4vw,24px)] rounded-2xl border border-border bg-card p-[clamp(18px,3vw,32px)] text-card-foreground">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="text-[clamp(52px,10vw,76px)] leading-none">
-          {met ? "🐬" : "🐚"}
-        </div>
+        <div className="text-[clamp(52px,10vw,76px)] leading-none">{mark}</div>
         <h1
           data-testid="verdict"
           className="m-0 text-[clamp(24px,3.6vw,34px)] font-extrabold tracking-tight"
         >
-          {met ? "목표 성공!" : "조금만 더!"}
+          {head}
         </h1>
-        <p className="m-0 text-[clamp(14px,1.8vw,17px)] text-muted-foreground">
-          {met
-            ? "한 번도 안 보고 여기까지 왔어요. 바다 더 깊이 들어가 볼까요?"
-            : `목표까지 ${GOAL_SCORE - score}점 남았어요. 이어서 맞히면 보너스가 붙어요.`}
-        </p>
+        <p className="m-0 text-[clamp(14px,1.8vw,17px)] text-muted-foreground">{sub}</p>
       </div>
 
       <div className="grid grid-cols-2 gap-[clamp(10px,1.6vw,16px)]">
@@ -46,24 +52,19 @@ export function ResultScreen({ result, onAgain, onQuit }: ResultScreenProps) {
           value={`${accuracy}%`}
           note="처음 누른 키가 맞은 비율"
         />
-        <ScoreCard
-          testId="result-hits"
-          label="글자 수"
-          value={hits}
-          note="60초 동안 친 글자"
-        />
+        <ScoreCard testId="result-hits" label="글자 수" value={hits} note="60초 동안 친 글자" />
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid gap-2 pt-2">
         <div className="h-3.5 overflow-hidden rounded-full bg-muted">
           <div
-            className="h-full rounded-full bg-primary"
+            className={cn("h-full rounded-full", isRecordLike ? "bg-foreground" : "bg-primary")}
             style={{ width: `${goalPercent}%` }}
           />
         </div>
         <div className="flex justify-between text-[13px] font-semibold text-muted-foreground">
-          <span>내 점수 {score}점</span>
-          <span>목표 {GOAL_SCORE}점</span>
+          <span>내 점수 {score.toLocaleString("ko-KR")}점</span>
+          <span>{rightLegend}</span>
         </div>
       </div>
 
@@ -75,6 +76,47 @@ export function ResultScreen({ result, onAgain, onQuit }: ResultScreenProps) {
       </div>
     </div>
   );
+}
+
+function describeVerdict(
+  verdict: ReturnType<typeof judgeRound>,
+  score: number,
+  bestBefore: number
+): { mark: string; head: string; sub: string } {
+  const fmt = (n: number) => n.toLocaleString("ko-KR");
+  switch (verdict) {
+    case "record":
+      return {
+        mark: "🐳",
+        head: "신기록!",
+        sub: `지난 최고 ${fmt(bestBefore)}점을 ${fmt(score - bestBefore)}점 넘었어요.`,
+      };
+    case "tie":
+      return {
+        mark: "🐬",
+        head: "내 최고와 똑같아요!",
+        sub: "한 글자만 더 맞히면 신기록이에요.",
+      };
+    case "close":
+      return {
+        mark: "🐬",
+        head: "아깝다!",
+        sub: `내 최고 ${fmt(bestBefore)}점까지 ${fmt(bestBefore - score)}점. 거의 다 왔어요.`,
+      };
+    case "first":
+      return {
+        mark: "🐬",
+        head: "첫 기록!",
+        sub: `${fmt(score)}점이 내 첫 기록이에요. 다음 판부터 이 점수를 넘어 봐요.`,
+      };
+    case "more":
+    default:
+      return {
+        mark: "🐚",
+        head: "조금만 더!",
+        sub: `내 최고 ${fmt(bestBefore)}점까지 ${fmt(bestBefore - score)}점 남았어요. 이어서 맞히면 보너스가 붙어요.`,
+      };
+  }
 }
 
 function ScoreCard({
@@ -98,9 +140,7 @@ function ScoreCard({
         lead && "col-span-full"
       )}
     >
-      <span className="text-[13px] font-bold tracking-wide text-muted-foreground">
-        {label}
-      </span>
+      <span className="text-[13px] font-bold tracking-wide text-muted-foreground">{label}</span>
       <span
         data-testid={`${testId}-value`}
         className={cn(
