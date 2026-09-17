@@ -244,6 +244,11 @@
   }
   .bd-key[data-inround="no"] { background: transparent; color: var(--muted-foreground); opacity: 0.45 }
   .bd-key-finger { width: 7px; height: 7px; border-radius: 99px; background: currentColor; opacity: 0.35 }
+  .bd-key.pressed {
+    background: var(--primary); color: var(--primary-foreground); border-color: var(--primary);
+    transform: translateY(-6px) scale(1.06);
+  }
+  .bd-key.pressed .bd-key-finger { opacity: 1 }
   .bd-key.show {
     background: var(--destructive); color: var(--primary-foreground); border-color: var(--destructive);
     transform: translateY(-5px) scale(1.06);
@@ -350,7 +355,7 @@
       <div class="bd-ready-head">
         <h1 class="bd-title">바다야, 타자 쳐볼까?</h1>
         <p class="bd-lede">
-          가운뎃줄 여덟 글자를 60초 동안 쳐 봐요. 700점을 넘기면 오늘 목표 성공!
+          가운뎃줄 여덟 글자를 60초 동안 쳐 봐요. 300점을 넘기면 오늘 목표 성공!
         </p>
       </div>
 
@@ -394,7 +399,7 @@
         <div class="bd-goal">
           <span class="bd-meter-label">점수</span>
           <div class="bd-goal-dots" id="goal-dots"></div>
-          <span class="bd-goal-count" id="goal-count">0 / 700</span>
+          <span class="bd-goal-count" id="goal-count">0 / 300</span>
         </div>
         <button type="button" tabindex="-1" data-component="Button" data-variant="outline"
                 data-size="sm" id="btn-stop">멈추기</button>
@@ -425,17 +430,17 @@
         <div class="bd-scores">
           <div class="bd-score is-lead">
             <span class="bd-score-label">점수</span>
-            <span class="bd-score-value" id="score-total">1120</span>
+            <span class="bd-score-value" id="score-total">520</span>
             <span class="bd-score-note">맞힌 글자 10점에 연속 보너스를 더한 점수예요.</span>
           </div>
           <div class="bd-score is-side">
             <span class="bd-score-label">정확도</span>
-            <span class="bd-score-value" id="score-accuracy">92%</span>
+            <span class="bd-score-value" id="score-accuracy">78%</span>
             <span class="bd-score-note">처음 누른 키가 맞은 비율</span>
           </div>
           <div class="bd-score is-side">
             <span class="bd-score-label">글자 수</span>
-            <span class="bd-score-value" id="score-speed">44</span>
+            <span class="bd-score-value" id="score-speed">42</span>
             <span class="bd-score-note">60초 동안 친 글자</span>
           </div>
         </div>
@@ -443,8 +448,8 @@
         <div class="bd-goalbar">
           <div class="bd-goalbar-track"><div class="bd-goalbar-fill" id="goalbar" style="width: 100%"></div></div>
           <div class="bd-goalbar-legend">
-            <span id="goalbar-left">내 점수 1120점</span>
-            <span>목표 700점</span>
+            <span id="goalbar-left">내 점수 520점</span>
+            <span>목표 300점</span>
           </div>
         </div>
       </div>
@@ -454,33 +459,33 @@
           <div class="bd-verdict-mark">🐚</div>
           <h1 class="bd-verdict-head" id="verdict-head-short">조금만 더!</h1>
           <p class="bd-verdict-sub" id="verdict-sub-short">
-            목표까지 220점 남았어요. 이어서 맞히면 보너스가 붙어요.
+            목표까지 110점 남았어요. 이어서 맞히면 보너스가 붙어요.
           </p>
         </div>
 
         <div class="bd-scores">
           <div class="bd-score is-lead">
             <span class="bd-score-label">점수</span>
-            <span class="bd-score-value" id="score-total-short">480</span>
+            <span class="bd-score-value" id="score-total-short">190</span>
             <span class="bd-score-note">맞힌 글자 10점에 연속 보너스를 더한 점수예요.</span>
           </div>
           <div class="bd-score is-side">
             <span class="bd-score-label">정확도</span>
-            <span class="bd-score-value" id="score-accuracy-short">71%</span>
+            <span class="bd-score-value" id="score-accuracy-short">48%</span>
             <span class="bd-score-note">처음 누른 키가 맞은 비율</span>
           </div>
           <div class="bd-score is-side">
             <span class="bd-score-label">글자 수</span>
-            <span class="bd-score-value" id="score-speed-short">28</span>
+            <span class="bd-score-value" id="score-speed-short">17</span>
             <span class="bd-score-note">60초 동안 친 글자</span>
           </div>
         </div>
 
         <div class="bd-goalbar">
-          <div class="bd-goalbar-track"><div class="bd-goalbar-fill" id="goalbar-short" style="width: 70%"></div></div>
+          <div class="bd-goalbar-track"><div class="bd-goalbar-fill" id="goalbar-short" style="width: 63%"></div></div>
           <div class="bd-goalbar-legend">
-            <span id="goalbar-left-short">내 점수 480점</span>
-            <span>목표 700점</span>
+            <span id="goalbar-left-short">내 점수 190점</span>
+            <span>목표 300점</span>
           </div>
         </div>
       </div>
@@ -510,7 +515,7 @@
   ];
   const DRILL = KEYS.filter(k => k.inRound);
   const ROUND_SECONDS = 60;
-  const GOAL_SCORE = 700;
+  const GOAL_SCORE = 300;
   const BASE_POINT = 10;
   const BONUS_STEP = 20;
   const BONUS_CAP = 5;   // bonus stops growing at +100
@@ -678,6 +683,22 @@
 
   capture.addEventListener('keydown', handleKey);
   document.querySelector('[data-screen="round"]').addEventListener('pointerdown', () => capture.focus());
+
+  /* 준비 화면에서는 아직 판정하지 않는다. 누른 물리 키에 해당하는 자리만 켜 준다. */
+  const readyKeys = document.getElementById('ready-keys');
+  addEventListener('keydown', event => {
+    if (prototypeShell.getScreen() !== 'ready') return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    const key = readyKeys.querySelector('[data-code="' + event.code + '"]');
+    if (!key) return;
+    event.preventDefault();
+    readyKeys.querySelectorAll('.bd-key.pressed').forEach(el => el.classList.remove('pressed'));
+    key.classList.add('pressed');
+  });
+  addEventListener('keyup', event => {
+    const key = readyKeys.querySelector('[data-code="' + event.code + '"]');
+    if (key) key.classList.remove('pressed');
+  });
 
   document.getElementById('btn-start').onclick = startRound;
   document.getElementById('btn-again').onclick = startRound;
