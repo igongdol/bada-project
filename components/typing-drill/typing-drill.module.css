@@ -1,0 +1,81 @@
+/*
+ * 게임 표면(연습 화면)의 연출용 애니메이션. 일반 control은 shadcn 구성을 쓰고,
+ * 여기서는 Tailwind 유틸리티로 표현하기 번거로운 keyframe만 다룬다.
+ * docs/decisions/ui-composition.md: 색은 project preset의 semantic token만 쓴다.
+ */
+
+.letterHit {
+  animation: letterHit 260ms ease-out;
+  color: var(--primary);
+}
+
+.letterMiss {
+  animation: letterMiss 300ms ease-out;
+  color: var(--destructive);
+}
+
+@keyframes letterHit {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes letterMiss {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-12px);
+  }
+  50% {
+    transform: translateX(11px);
+  }
+  78% {
+    transform: translateX(-6px);
+  }
+}
+
+.cheer {
+  animation: cheer 420ms ease-out;
+}
+
+@keyframes cheer {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.keyShow {
+  animation: keyPulse 900ms ease-in-out infinite;
+}
+
+@keyframes keyPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px color-mix(in oklch, var(--destructive) 24%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 11px color-mix(in oklch, var(--destructive) 7%, transparent);
+  }
+}
+
+.captureInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
